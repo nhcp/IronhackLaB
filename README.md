@@ -1,3 +1,1 @@
-# tamim
-# Linux-Roadmap
-# IronhackLaB
+Lab
