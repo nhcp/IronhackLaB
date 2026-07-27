@@ -1,0 +1,62 @@
+{
+  "name": "session_breakout_fx_v1",
+  "family": "session_breakout",
+  "symbols": [
+    "EURUSD",
+    "XAUUSD",
+    "SPX500",
+    "GER40"
+  ],
+  "timeframe": "1h",
+  "is_months": 18,
+  "oos_months": 6,
+  "step_months": 6,
+  "min_trades_is": 30,
+  "pass_mode": "any_symbol",
+  "param_grid": {
+    "session": [
+      "london",
+      "ny"
+    ],
+    "range_hours": [
+      1,
+      2
+    ],
+    "buffer_pct": [
+      0.0,
+      0.1
+    ],
+    "hold_hours": [
+      4,
+      8
+    ]
+  },
+  "conditions": [
+    {
+      "metric": "total_return_h1",
+      "operator": ">",
+      "threshold": 0
+    },
+    {
+      "metric": "total_return_h2",
+      "operator": ">",
+      "threshold": 0
+    },
+    {
+      "metric": "sharpe",
+      "operator": ">=",
+      "threshold": 0.5
+    },
+    {
+      "metric": "trades_per_month",
+      "operator": ">=",
+      "threshold": 30
+    },
+    {
+      "metric": "trades_per_month",
+      "operator": "<=",
+      "threshold": 500
+    }
+  ],
+  "cost_model": "fx_data.COSTS gated column + 0.01%/night held; data pins in data/SHA256SUMS"
+}

@@ -1,0 +1,61 @@
+{
+  "name": "rsi_meanrev_fx_v1",
+  "family": "rsi_meanrev",
+  "symbols": [
+    "EURUSD",
+    "XAUUSD",
+    "SPX500",
+    "GER40"
+  ],
+  "timeframe": "1h",
+  "is_months": 18,
+  "oos_months": 6,
+  "step_months": 6,
+  "min_trades_is": 30,
+  "pass_mode": "any_symbol",
+  "param_grid": {
+    "period": [
+      7,
+      14,
+      21
+    ],
+    "oversold": [
+      20,
+      25,
+      30
+    ],
+    "overbought": [
+      70,
+      75,
+      80
+    ]
+  },
+  "conditions": [
+    {
+      "metric": "total_return_h1",
+      "operator": ">",
+      "threshold": 0
+    },
+    {
+      "metric": "total_return_h2",
+      "operator": ">",
+      "threshold": 0
+    },
+    {
+      "metric": "sharpe",
+      "operator": ">=",
+      "threshold": 0.5
+    },
+    {
+      "metric": "trades_per_month",
+      "operator": ">=",
+      "threshold": 30
+    },
+    {
+      "metric": "trades_per_month",
+      "operator": "<=",
+      "threshold": 500
+    }
+  ],
+  "cost_model": "fx_data.COSTS gated column + 0.01%/night held; data pins in data/SHA256SUMS"
+}
