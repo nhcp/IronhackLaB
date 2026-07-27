@@ -1,10 +1,11 @@
-"""Generate the wave-1 template gate JSON for one FX family.
+"""Generate a template gate JSON for one FX family.
 
-Reads PARAM_GRID from families/<name>.py and writes gates/<name>_fx_v1.json.
-Review the JSON, then commit it -- fx_sweep.py refuses to run uncommitted
-gates. Template conditions: h1>0, h2>0, gated sharpe >= 0.5, trades/month
-within the 30-500 band. pass_mode any_symbol: a family advances per
-passing instrument.
+Usage: python3 gen_gate.py <family> [version]   (version defaults to v1)
+
+Reads PARAM_GRID from families/<name>.py and writes
+gates/<name>_fx_<version>.json. Review, then commit -- fx_sweep.py refuses
+to run uncommitted gates. Template conditions: h1>0, h2>0, gated sharpe
+>= 0.5, trades/month within the 30-500 band. pass_mode any_symbol.
 """
 import importlib.util
 import json
@@ -16,13 +17,14 @@ FX_DIR = Path(__file__).resolve().parent
 
 def main():
     fam = sys.argv[1]
+    ver = sys.argv[2] if len(sys.argv) > 2 else "v1"
     fam_path = FX_DIR / "families" / f"{fam}.py"
     spec = importlib.util.spec_from_file_location(fam, fam_path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
 
     gate = {
-        "name": f"{fam}_fx_v1",
+        "name": f"{fam}_fx_{ver}",
         "family": fam,
         "symbols": ["EURUSD", "XAUUSD", "SPX500", "GER40"],
         "timeframe": "1h",
@@ -42,7 +44,7 @@ def main():
         "cost_model": "fx_data.COSTS gated column + 0.01%/night held; "
                       "data pins in data/SHA256SUMS",
     }
-    out = FX_DIR / "gates" / f"{fam}_fx_v1.json"
+    out = FX_DIR / "gates" / f"{fam}_fx_{ver}.json"
     out.parent.mkdir(exist_ok=True)
     out.write_text(json.dumps(gate, indent=2) + "\n")
     print(f"wrote {out}")

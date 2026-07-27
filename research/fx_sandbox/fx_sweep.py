@@ -11,6 +11,12 @@ combo selection, metric formulas, gate evaluator) are imported from
 verdict. Cost columns: 'gated' (pessimistic; selection + gate evaluation)
 and 'info' (median-spread; informational only).
 
+Flat-window policy (v2 engine amendment, 2026-07-27): if no parameter
+combo reaches min_trades_is in a window's IS slice, the strategy trades
+FLAT (position 0) through that window's OOS period instead of aborting.
+Rationale: nothing qualified in-sample, so nothing would be deployed
+out-of-sample. The window is reported as flat=True.
+
 Pre-registration is enforced against THIS repo: the gate JSON and family
 module must be committed before a run. Results append to fx_sandbox's own
 KILL_LOG.md.
@@ -79,6 +85,15 @@ def _eval_is_combo(df_is, mod, params, ann, rt_cost):
     return {"sharpe": _sharpe(sr, ann), "num_trades": int(switch.sum())}
 
 
+def _flat_window(oos_df):
+    """Zero-position series for an OOS window where no combo qualified."""
+    rv = oos_df["close"].pct_change()
+    rv = rv[rv.notna()]
+    sp = pd.Series(0.0, index=rv.index)
+    switch = pd.Series(False, index=rv.index)
+    return sp, rv, switch
+
+
 def _stitch(sp_l, rv_l, sw_l, bh_l, ann, oos_months, gated_cost, info_cost):
     sp     = pd.concat(sp_l)
     rv     = pd.concat(rv_l)
@@ -134,17 +149,21 @@ def sweep_symbol(df, mod, gate, symbol):
         raise ValueError(f"{symbol}: no complete walk-forward windows fit")
 
     reports = []
+    n_flat = 0
     sp_l, rv_l, sw_l, bh_l = [], [], [], []
     for w in windows:
         cm = [(p, _eval_is_combo(w["is_df"], mod, p, ann, gated_c))
               for p in combos]
         best_p, best_is = select_best_combo(cm, min_tr)
+
         if best_p is None:
-            raise ValueError(
-                f"{symbol} window {w['window_num']}: "
-                f"no combo met min_trades_is={min_tr}"
-            )
-        sp, rv, switch = _positions_raw(w["oos_df"], mod, best_p)
+            sp, rv, switch = _flat_window(w["oos_df"])
+            n_flat += 1
+            flat = True
+        else:
+            sp, rv, switch = _positions_raw(w["oos_df"], mod, best_p)
+            flat = False
+
         sp_l.append(sp); rv_l.append(rv)
         sw_l.append(switch); bh_l.append(rv.copy())
         srw = _sr(sp, rv, switch, gated_c)
@@ -152,8 +171,9 @@ def sweep_symbol(df, mod, gate, symbol):
             "window_num":       w["window_num"],
             "oos_period":       (str(w["oos_start"].date()),
                                  str(w["oos_end"].date())),
+            "flat":             flat,
             "selected_params":  best_p,
-            "is_sharpe":        best_is["sharpe"],
+            "is_sharpe":        best_is["sharpe"] if best_is else 0.0,
             "oos_sharpe_gated": _sharpe(srw, ann),
             "oos_return_gated": float(((1.0 + srw).prod() - 1.0) * 100.0),
             "oos_trades":       int(switch.sum()),
@@ -162,7 +182,7 @@ def sweep_symbol(df, mod, gate, symbol):
     oos_total = len(windows) * oos_m
     g_m, i_m = _stitch(sp_l, rv_l, sw_l, bh_l, ann, oos_total, gated_c, info_c)
     return {"windows": reports, "gated": g_m, "info": i_m,
-            "ann": ann, "n_combos": len(combos)}
+            "ann": ann, "n_combos": len(combos), "n_flat": n_flat}
 
 
 def main():
@@ -189,8 +209,13 @@ def main():
         results[sym] = res
         metrics_by_symbol[sym] = res["gated"]
         print(f"\n=== {sym}  (ann={res['ann']}, "
-              f"combos/window={res['n_combos']}) ===")
+              f"combos/window={res['n_combos']}, "
+              f"flat_windows={res['n_flat']}) ===")
         for w in res["windows"]:
+            if w["flat"]:
+                print(f"  W{w['window_num']}: OOS {w['oos_period'][0]} -> "
+                      f"{w['oos_period'][1]}  FLAT (no combo met min_trades_is)")
+                continue
             print(f"  W{w['window_num']}: OOS {w['oos_period'][0]} -> "
                   f"{w['oos_period'][1]}  params={w['selected_params']}  "
                   f"IS_sh={w['is_sharpe']:+.2f}  "
@@ -227,7 +252,8 @@ def main():
                      f"h1 {m['total_return_h1']:+.1f}%, "
                      f"h2 {m['total_return_h2']:+.1f}%, "
                      f"tpm {m['trades_per_month']:.1f}, "
-                     f"WR {m['win_rate']*100:.1f}%\n")
+                     f"WR {m['win_rate']*100:.1f}%, "
+                     f"flat_windows {results[sym]['n_flat']}\n")
     print(f"\nappended to {KILL_LOG}")
 
 

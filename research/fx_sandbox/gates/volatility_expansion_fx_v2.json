@@ -1,0 +1,70 @@
+{
+  "name": "volatility_expansion_fx_v2",
+  "family": "volatility_expansion",
+  "symbols": [
+    "EURUSD",
+    "XAUUSD",
+    "SPX500",
+    "GER40"
+  ],
+  "timeframe": "1h",
+  "is_months": 18,
+  "oos_months": 6,
+  "step_months": 6,
+  "min_trades_is": 30,
+  "pass_mode": "any_symbol",
+  "param_grid": {
+    "atr_period": [
+      14,
+      21
+    ],
+    "expansion_mult": [
+      1.5,
+      2.0,
+      2.5,
+      3.0
+    ],
+    "avg_period": [
+      20,
+      40
+    ],
+    "sl_mult": [
+      1.5,
+      2.5
+    ],
+    "tp_mult": [
+      2.0,
+      3.0,
+      4.0,
+      5.0
+    ]
+  },
+  "conditions": [
+    {
+      "metric": "total_return_h1",
+      "operator": ">",
+      "threshold": 0
+    },
+    {
+      "metric": "total_return_h2",
+      "operator": ">",
+      "threshold": 0
+    },
+    {
+      "metric": "sharpe",
+      "operator": ">=",
+      "threshold": 0.5
+    },
+    {
+      "metric": "trades_per_month",
+      "operator": ">=",
+      "threshold": 30
+    },
+    {
+      "metric": "trades_per_month",
+      "operator": "<=",
+      "threshold": 500
+    }
+  ],
+  "cost_model": "fx_data.COSTS gated column + 0.01%/night held; data pins in data/SHA256SUMS"
+}
