@@ -1,0 +1,1 @@
+event_time_ms,trade_time_ms,symbol,side,order_price,avg_fill_price,orig_qty,fill_qty,notional_usd,status,collected_at_utc
